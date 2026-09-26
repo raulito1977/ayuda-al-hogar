@@ -1,0 +1,403 @@
+Perfecto. Vamos a diseñarlo como lo haría un arquitecto Full Stack pensando en:
+
+Plain Text
+Frontend:
+HTML + CSS + JavaScript
+ 
+Backend:
+Node.js
+ 
+Base de Datos:
+Supabase PostgreSQL
+ 
+Pagos:
+Stripe Connect
+ 
+Modelo:
+Marketplace tipo Uber / Glovo
+ 
+Comisión:
+15%
+Mostrar más líneas
+
+Importante:
+
+✅ La IP puede guardarse al registrar usuarios.
+
+✅ El QR NO pertenece a la base de datos. Es simplemente un enlace a la web o app.
+
+✅ El cobro se producirá cuando un profesional acepte una alerta y el cliente confirme el servicio.
+
+Schema.sql
+
+Guarda este archivo como:
+
+Plain Text
+database/schema.sql
+ 
+Mostrar más líneas
+SQL
+-- =============================================
+-- AYUDAALHOGAR.COM
+-- ESQUEMA DE PRODUCCION V1
+-- =============================================
+ 
+-- =============================================
+-- USUARIOS
+-- =============================================
+ 
+create table usuarios (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+email varchar(255) unique not null,
+ 
+password_hash text not null,
+ 
+rol varchar(30) not null,
+ 
+ip_registro varchar(100),
+ 
+activo boolean default true,
+ 
+email_verificado boolean default false,
+ 
+fecha_registro timestamp default now(),
+ 
+constraint chk_rol
+check (
+rol in (
+'familia',
+'voluntario',
+'profesional',
+'admin'
+)
+)
+ 
+);
+ 
+-- =============================================
+-- PERFILES
+-- =============================================
+ 
+create table perfiles (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+usuario_id uuid not null
+references usuarios(id)
+on delete cascade,
+ 
+nombre varchar(150) not null,
+ 
+telefono varchar(50),
+ 
+direccion text,
+ 
+ciudad varchar(100),
+ 
+provincia varchar(100),
+ 
+codigo_postal varchar(20),
+stripe_account_id varchar (255),
+tipo_perfil varchar(50),
+verificado boolean default false,
+ 
+foto_url text,
+ 
+biografia text,
+ 
+fecha_creacion timestamp default now()
+ 
+);
+ 
+-- =============================================
+-- UBICACIONES GPS
+-- =============================================
+ 
+create table ubicaciones (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+usuario_id uuid not null
+references usuarios(id)
+on delete cascade,
+ 
+latitud decimal(10,8),
+ 
+longitud decimal(11,8),
+ 
+actualizado timestamp default now()
+ 
+);
+ 
+-- =============================================
+-- SERVICIOS DISPONIBLES
+-- =============================================
+ 
+create table servicios (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+nombre varchar(150) not null,
+ 
+descripcion text,
+ 
+categoria varchar(100),
+ 
+activo boolean default true,
+ 
+fecha_creacion timestamp default now()
+ 
+);
+ 
+-- =============================================
+-- ALERTAS
+-- =============================================
+ 
+create table alertas (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+usuario_id uuid not null
+references usuarios(id),
+ 
+servicio_id uuid
+references servicios(id),
+ 
+titulo varchar(255) not null,
+ 
+descripcion text,
+ 
+fecha_alerta timestamp default now(),
+ 
+estado varchar(30) default 'abierta',
+ 
+profesional_id uuid
+references usuarios(id),
+ 
+constraint chk_estado_alerta
+check (
+estado in (
+'abierta',
+'aceptada',
+'en_proceso',
+'finalizada',
+'cancelada'
+)
+)
+ 
+);
+ 
+-- =============================================
+-- PAGOS MARKETPLACE
+-- =============================================
+ 
+create table pagos (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+alerta_id uuid
+references alertas(id),
+ 
+cliente_id uuid
+references usuarios(id),
+ 
+profesional_id uuid
+references usuarios(id),
+ 
+stripe_payment_intent_id text,
+ 
+importe_total decimal(10,2),
+ 
+porcentaje_comision decimal(5,2) default 15.00,
+ 
+importe_comision decimal(10,2),
+ 
+importe_profesional decimal(10,2),
+ 
+estado varchar(30) default 'pendiente',
+ 
+fecha_pago timestamp,
+ 
+constraint chk_estado_pago
+check (
+estado in (
+'pendiente',
+'pagado',
+'cancelado',
+'reembolsado'
+)
+)
+ 
+);
+ 
+-- =============================================
+-- STRIPE CONNECT
+-- =============================================
+ 
+create table stripe_connect (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+usuario_id uuid unique
+references usuarios(id),
+ 
+stripe_account_id text,
+ 
+onboarding_completado boolean default false,
+ 
+fecha_creacion timestamp default now()
+ 
+);
+ 
+-- =============================================
+-- VALORACIONES
+-- =============================================
+ 
+create table valoraciones (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+emisor_id uuid not null
+references usuarios(id),
+ 
+receptor_id uuid not null
+references usuarios(id),
+ 
+estrellas integer not null,
+ 
+comentario text,
+ 
+fecha_valoracion timestamp default now(),
+ 
+constraint chk_estrellas
+check (
+estrellas >= 1
+and estrellas <= 5
+)
+ 
+);
+ 
+-- =============================================
+-- MENSAJES INTERNOS
+-- =============================================
+ 
+create table mensajes (
+ 
+id uuid primary key default gen_random_uuid(),
+ 
+remitente_id uuid
+references usuarios(id),
+ 
+destinatario_id uuid
+references usuarios(id),
+ 
+mensaje text not null,
+ 
+fecha_envio timestamp default now()
+ 
+);
+ 
+-- =============================================
+-- INDICES
+-- =============================================
+ 
+create index idx_usuario_rol
+on usuarios(rol);
+ 
+create index idx_alerta_estado
+on alertas(estado);
+ 
+create index idx_pago_estado
+on pagos(estado);
+ 
+create index idx_ubicacion_usuario
+on ubicaciones(usuario_id);
+ 
+create index idx_valoracion_receptor
+on valoraciones(receptor_id);
+Mostrar más líneas
+Servicios iniciales
+
+Puedes cargar estos servicios:
+
+SQL
+insert into servicios
+(nombre, descripcion, categoria)
+values
+ 
+('Compañía','Acompañamiento y conversación','compania'),
+ 
+('Salud','Apoyo y acompañamiento sanitario','salud'),
+ 
+('Medicacion','Recogida o recordatorio medicación','medicacion'),
+ 
+('Compras','Compra de alimentos y productos','compras'),
+ 
+('Paseo mascotas','Paseo y atención de mascotas','mascotas'),
+ 
+('Movilidad','Transporte y desplazamientos','movilidad'),
+ 
+('Tramites','Ayuda administrativa','tramites'),
+ 
+('Ocio','Estimulación cognitiva y ocio','ocio'),
+ 
+('Hogar','Pequeñas tareas domésticas','hogar');
+Mostrar más líneas
+QR de descarga
+
+Cuando publiques la web:
+
+Plain Text
+https://ayudaalhogar.com
+Mostrar más líneas
+
+el QR apuntará a esa dirección.
+
+Por ejemplo:
+
+HTML
+https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://ayudaalhogar.com
+Mostrar más líneas
+
+Cuando todavía no tengas el dominio publicado, utiliza temporalmente la URL que te dé Vercel.
+
+Resultado
+
+Con este esquema ya tienes preparada la base para:
+
+✅ Usuarios.
+ ✅ Familias.
+ ✅ Voluntarios.
+ ✅ Profesionales.
+ ✅ Ubicación GPS.
+ ✅ Alertas.
+ ✅ Sistema de servicios.
+ ✅ Cobro tipo Uber/Glovo con comisión del 18,5%.
+ ✅ Stripe Connect.
+ ✅ Valoraciones.
+ ✅ Mensajería interna.
+ ✅ QR de acceso a la aplicación.
+Esta sería una base de datos suficientemente sólida para arrancar el MVP profesional de Ayudaalhogar.com.
+
+Proporcione sus comentarios sobre BizChat
+Corrige el esquema para usar Supabase AuthAñade RLS y políticas de seguridadGenera el backend de pagos con Stripe
+TodoArchivosArchivosPower BIPower BI
+create table publicidad(
+id uuid primary key default gen_random_uuid(),
+titulo varchar (255),
+imagen_url text,
+enlace_wep text,
+archivo boolean default true,
+create table idiomas_app(
+id uuid primary key default gen_random_uuid(),
+codigo_idioma varchar(5) not null,
+nombre_idioma varchar(50) not null
+);
+insert intro idiomas_app (codigo_idioma, nombre_idioma) values 
+(´es´, ´Español(España y Latinoamerica)´
+(´en´, ´English (Inglès)´),
+(´fr´, ´français (Fancès)´),
+(´de´, ´deutsch  (Alemàn)´),
+(´pt´, ´portuguès (portuguès)´);
