@@ -8,7 +8,7 @@ Entorno de Desarrollo Principal: Programado, estructurado y editado localmente p
 Desarrollo Base y Lógica: Código personalizado implementado a mano en Node.js y JavaScript, utilizando consultas de IA avanzadas (incluyendo Lovable y otros modelos) para la optimización y soluciones de componentes específicos.
 Base de Datos y Autenticación: Integración manual de Supabase para la gestión de usuarios y almacenamiento seguro de datos.
 Pasarela de Pagos: Configuración completa del flujo transaccional y procesamiento de pagos con Stripe.
-Alojamiento y Despliegue (Hosting): Configuración de la infraestructura de producción y despliegue continuo en Vercel conectado al repositorio.
+Alojamiento y Despliegue (Hosting): Configuración de la infraestructura de producción y despliegue continuo en lovable conectado al repositorio.
 Dominio Personalizado: Gestión, configuración de DNS y apuntamiento de servidores en Namecheap.
 Control de Versiones: Gestión completa del repositorio mediante Git y GitHub.
 🤝 Créditos del Desarrollo
